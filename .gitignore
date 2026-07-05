@@ -50,3 +50,8 @@ htmlcov/
 
 # Temporary files
 *.tmp
+
+# AAGNet training artifacts (large binaries; see AAGNet/README.md for checkpoint path)
+AAGNet/output/
+AAGNet/wandb/
+*.pth
