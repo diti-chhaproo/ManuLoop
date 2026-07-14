@@ -127,13 +127,34 @@ class TopologyChecker():
 
 class AAGExtractor:
     def __init__(
-        self, 
-        step_file, 
-        attribute_schema, 
-        scale_body=True):
+        self,
+        step_file,
+        attribute_schema,
+        scale_body=True,
+        preloaded_shape=None):
+        """
+        Args:
+            step_file: path to a STEP file. Only used to load the body from
+                disk (via load_body_from_step) and for error messages - if
+                preloaded_shape is given, step_file is not read at all and
+                only serves as a label for assertion/error messages.
+            attribute_schema: feature schema dict (see feature_lists/*.json).
+            scale_body: whether to rescale the solid into a unit box.
+            preloaded_shape: an already-loaded TopoDS_Solid to use directly
+                instead of reading step_file from disk. This avoids writing
+                a shape out to a standalone STEP file and reading it back in
+                just to hand it to this class - a round-trip that has been
+                observed to segfault inside OCCT's native STEP transfer code
+                (STEPControl_Reader.TransferRoots()) for some solids
+                extracted out of multi-body assemblies, even though the
+                original assembly file and the in-memory shape are both
+                fine. Passing the shape directly skips that STEP
+                write+reread entirely.
+        """
         self.step_file = step_file
         self.attribute_schema = attribute_schema
         self.scale_body = scale_body
+        self.preloaded_shape = preloaded_shape
         # whether to extract UV-grid
         self.use_uv = "UV-grid" in self.attribute_schema.keys()
         self.topchecker = TopologyChecker()
@@ -149,12 +170,13 @@ class AAGExtractor:
         Creates a attributed adjacency graph from the given shape (Solid)
 
         Args:
-            
+
         Returns:
 
         """
-        # Load the body from the STEP file
-        self.body = self.load_body_from_step()
+        # Use the pre-loaded shape if given, otherwise load from the STEP file
+        self.body = self.preloaded_shape if self.preloaded_shape is not None \
+            else self.load_body_from_step()
         assert self.body is not None, \
             "the shape {} is non-manifold or open".format(self.step_file)
         assert self.topchecker(self.body), \
